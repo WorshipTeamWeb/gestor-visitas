@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Visitas - Vereador Giovane PRO</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1f8ba5;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --dark-gray: #36454f;
+            --info: #3498db;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --border: #bdc3c7;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f6fa;
+            color: var(--dark);
+        }
+
+        .container-main {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(135deg, var(--primary) 0%, #16697a 100%);
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+
+        .filter-group {
+            margin-bottom: 25px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            opacity: 0.9;
+            color: rgba(255,255,255,0.95);
+        }
+
+        .filter-group input,
+        .filter-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            font-size: 13px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            margin-bottom: 8px;
+        }
+
+        .filter-group input::placeholder,
+        .filter-group select::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+
+        .filter-group select option {
+            background: var(--dark);
+            color: white;
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.6);
+        }
+
+        .btn-filter {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-filter:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: var(--primary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #16697a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-secondary {
+            background: var(--light);
+            color: var(--dark);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: #dfe6e9;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            padding: 20px 30px;
+            background: white;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stat-card {
+            background: var(--light);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+            text-align: center;
+        }
+
+        .stat-card.success { border-left-color: var(--success); }
+        .stat-card.warning { border-left-color: var(--warning); }
+        .stat-card.danger { border-left-color: var(--danger); }
+        .stat-card.dark { border-left-color: var(--dark-gray); }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+            text-transform: uppercase;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 30px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .tab-btn {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #7f8c8d;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .table-wrapper {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f8f9fa;
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--dark);
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        tbody tr:hover {
+            background: #f9f9f9;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status.verde { background: #d4edda; color: #155724; }
+        .status.amarelo { background: #fff3cd; color: #856404; }
+        .status.vermelho { background: #f8d7da; color: #721c24; }
+        .status.faleceu { background: #d6d8db; color: #383d41; }
+
+        .row-highlight-verde { border-left: 4px solid #27ae60; }
+        .row-highlight-amarelo { border-left: 4px solid #f39c12; }
+        .row-highlight-vermelho { border-left: 4px solid #e74c3c; }
+        .row-highlight-faleceu { border-left: 4px solid #36454f; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: var(--primary);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #7f8c8d;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 13px;
+            color: var(--dark);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--dark);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(31,139,165,0.05);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin: 15px 0;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .team-manager {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .team-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .team-tag {
+            background: var(--primary);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .team-tag button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+        }
+
+        .dashboard-section {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .alert-banner {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffc107;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 1024px) {
+            .stats-row {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container-main {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+            }
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-main">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <h2>🔍 Filtros</h2>
+            
+            <div class="filter-group">
+                <label>Buscar nome:</label>
+                <input type="text" id="searchName" placeholder="Digite um nome...">
+                <button class="btn-filter" onclick="buscarPorNome()">🔍 Buscar</button>
+            </div>
+
+            <div class="filter-group">
+                <label>Equipe:</label>
+                <select id="filterTeam">
+                    <option value="">Todas as equipes</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Bairro:</label>
+                <select id="filterBairro">
+                    <option value="">Todos os bairros</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Status:</label>
+                <select id="filterStatus">
+                    <option value="">Todos</option>
+                    <option value="verde">✓ Eleitor Permanece</option>
+                    <option value="amarelo">! Observação</option>
+                    <option value="vermelho">✗ Desistiu/Não Vota</option>
+                    <option value="faleceu">⚰️ Faleceu</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Visitado:</label>
+                <select id="filterVisitado">
+                    <option value="">Todos</option>
+                    <option value="sim">✓ Visitado</option>
+                    <option value="nao">✗ Não Visitado</option>
+                </select>
+            </div>
+
+            <button class="btn-filter" onclick="limparFiltros()">Limpar Filtros</button>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <!-- HEADER -->
+            <div class="header">
+                <h1>📋 Gestor de Visitas - Vereador Giovane</h1>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="abrirModalCadastro()">+ Novo Cadastro</button>
+                    <button class="btn btn-secondary" onclick="abrirImportModal()">📥 Importar</button>
+                    <button class="btn btn-secondary" onclick="exportarCSV()">📤 Exportar</button>
+                </div>
+            </div>
+
+            <!-- STATS -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalVisitas">0</div>
+                    <div class="stat-label">Total Registros</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value" id="totalVerde">0</div>
+                    <div class="stat-label">Permanece</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-value" id="totalAmarelo">0</div>
+                    <div class="stat-label">Observações</div>
+                </div>
+                <div class="stat-card danger">
+                    <div class="stat-value" id="totalVermelho">0</div>
+                    <div class="stat-label">Desistiu</div>
+                </div>
+                <div class="stat-card dark">
+                    <div class="stat-value" id="totalFaleceu">0</div>
+                    <div class="stat-label">Faleceu</div>
+                </div>
+            </div>
+
+            <!-- CONTENT -->
+            <div class="content">
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="mudarAba('todas')">Todas as Visitas</button>
+                    <button class="tab-btn" onclick="mudarAba('dashboard')">📊 Dashboard</button>
+                    <button class="tab-btn" onclick="mudarAba('aniversarios')">🎂 Aniversariantes</button>
+                    <button class="tab-btn" onclick="mudarAba('celebracoes')">🎉 Celebrações</button>
+                    <button class="tab-btn" onclick="mudarAba('nao-visitados')">❌ Não Visitados</button>
+                </div>
+
+                <!-- ABA: TODAS VISITAS -->
+                <div id="aba-todas" style="display: block;">
+                    <div class="table-wrapper">
+                        <table id="tabelaVisitas">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Equipe</th>
+                                    <th>Endereço</th>
+                                    <th>Telefone</th>
+                                    <th>Data Nasc.</th>
+                                    <th>Status</th>
+                                    <th>Visitado</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaBody">
+                            </tbody>
+                        </table>
+                        <div id="emptyState" class="empty-state" style="display:none;">
+                            <div class="empty-state-icon">📭</div>
+                            <p>Nenhum registro encontrado</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ABA: DASHBOARD -->
+                <div id="aba-dashboard" style="display: none;">
+                    <div class="dashboard-grid">
+                        <div class="dashboard-section">
+                            <h3>Status de Eleitores</h3>
+                            <div class="chart-container">
+                                <canvas id="chartStatus"></canvas>
+                            </div>
+                        </div>
+                        <div class="dashboard-section">
+                            <h3>Visitas por Equipe</h3>
+                            <div class="chart-container">
+                                <canvas id="chartEquipe"></canvas>
+                            </div>
+                        </div>
+                        <div class="dashboard-section">
+                            <h3>Cobertura por Bairro (Top 10)</h3>
+                            <div class="chart-container">
+                                <canvas id="chartBairro"></canvas>
+                            </div>
+                        </div>
+                        <div class="dashboard-section">
+                            <h3>Taxa de Visitação</h3>
+                            <div class="chart-container">
+                                <canvas id="chartVisitacao"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ABA: ANIVERSARIANTES -->
+                <div id="aba-aniversarios" style="display: none;">
+                    <div id="aniversariosContainer"></div>
+                </div>
+
+                <!-- ABA: CELEBRAÇÕES -->
+                <div id="aba-celebracoes" style="display: none;">
+                    <div class="dashboard-section">
+                        <h3>📅 Datas Comemorativas</h3>
+                        <div id="celebracoesContainer"></div>
+                    </div>
+                </div>
+
+                <!-- ABA: NÃO VISITADOS -->
+                <div id="aba-nao-visitados" style="display: none;">
+                    <div class="table-wrapper">
+                        <table id="tabelaNaoVisitados">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Equipe</th>
+                                    <th>Telefone</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaNaoVisitadosBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CADASTRO -->
+    <div class="modal" id="modalCadastro">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Novo Registro</h2>
+                <button class="close-modal" onclick="fecharModal()">&times;</button>
+            </div>
+            <form onsubmit="salvarCadastro(event)">
+                <div class="form-group">
+                    <label>Nome *</label>
+                    <input type="text" id="formNome" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Equipe *</label>
+                    <div class="team-manager">
+                        <div style="display: flex; gap: 10px;">
+                            <select id="formEquipe" required style="flex: 1;">
+                                <option value="">Selecione...</option>
+                            </select>
+                            <button type="button" class="btn btn-primary" style="padding: 10px 15px;" onclick="abrirModalEquipe()">➕ Adicionar</button>
+                        </div>
+                        <div class="team-list" id="teamListDisplay"></div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Rua</label>
+                        <input type="text" id="formRua" placeholder="Ex: Rua José">
+                    </div>
+                    <div class="form-group">
+                        <label>Número</label>
+                        <input type="text" id="formNumero" placeholder="Ex: 123">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Complemento</label>
+                        <input type="text" id="formComplemento" placeholder="Ex: Apto 45">
+                    </div>
+                    <div class="form-group">
+                        <label>Bairro</label>
+                        <input type="text" id="formBairro" placeholder="Ex: Centro">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Telefone</label>
+                    <input type="text" id="formTelefone" placeholder="(XX) XXXXX-XXXX">
+                </div>
+
+                <div class="form-group">
+                    <label>Data de Nascimento</label>
+                    <input type="date" id="formNascimento">
+                </div>
+
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="formVisitado" onchange="mostrarDataVisita()">
+                        <label for="formVisitado">Visitado</label>
+                    </div>
+                    <div class="form-group" id="dataVisitaGroup" style="display: none; margin: 0;">
+                        <input type="date" id="formDataVisita">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Status *</label>
+                    <select id="formStatus" required onchange="validarStatus()">
+                        <option value="verde">✓ Eleitor Permanece</option>
+                        <option value="amarelo">⚠️ Observação!</option>
+                        <option value="vermelho">✗ Desistiu/Não vota mais</option>
+                        <option value="faleceu">✝️ Faleceu</option>
+                    </select>
+                </div>
+
+                <div id="alertaObs" class="alert-banner alert-danger" style="display: none;">
+                    <span id="alertaTexto"></span>
+                </div>
+
+                <div class="form-group">
+                    <label>Observações</label>
+                    <textarea id="formObs" placeholder="Adicione informações relevantes..."></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL IMPORTAÇÃO -->
+    <div class="modal" id="modalImport">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Importar Planilha</h2>
+                <button class="close-modal" onclick="fecharImportModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Selecione arquivo .XLSX ou .CSV</label>
+                <input type="file" id="fileImport" accept=".xlsx,.csv" onchange="processarImportacao(event)">
+            </div>
+            <div id="importStatus"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="fecharImportModal()">Cancelar</button>
+                <button id="btnConfirmarImport" class="btn btn-primary" onclick="confirmarImportacao()" style="display:none;">Importar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let dados = JSON.parse(localStorage.getItem('visitasData')) || [];
+        let equipes = JSON.parse(localStorage.getItem('equipes')) || ['Denise', 'Edi', 'Djulia', 'Elaine', 'Fabiana', 'Lacy', 'Silvana', 'Vilson'];
+        let bairros = JSON.parse(localStorage.getItem('bairros')) || ['Centro', 'São Miguel', 'Vila Rosa', 'Cruz de Malta', 'Limeira', 'Vila Otília'];
+        let abaAtiva = 'todas';
+        let dadosImportacao = null;
+        let chartStatus = null, chartEquipe = null, chartBairro = null, chartVisitacao = null;
+
+        const dadosIniciais = [
+            { id: 1, nome: 'Lurdes', equipe: 'Denise', rua: 'Rui Barbosa', numero: '1726', complemento: '', bairro: 'Centro', telefone: '(99) 99725-7772', nascimento: '', status: 'verde', obs: 'Numero da casa está errado', visitado: false, dataVisita: '' },
+            { id: 2, nome: 'Nilda (Tia)', equipe: 'Denise', rua: 'Venancio Aires', numero: '1724', complemento: '', bairro: 'Parque Manoel João', telefone: '(99) 96833-7775', nascimento: '', status: 'verde', obs: '', visitado: true, dataVisita: '2026-01-10' },
+            { id: 3, nome: 'Helô', equipe: 'Denise', rua: 'Venezuela', numero: '220', complemento: '', bairro: 'São Miguel', telefone: '(99) 98031-1369', nascimento: '', status: 'amarelo', obs: '', visitado: true, dataVisita: '2026-01-10' },
+            { id: 4, nome: 'Nice e Vilmar', equipe: 'Denise', rua: 'Venezuela', numero: '225', complemento: '', bairro: 'São Miguel', telefone: '(99) 99645-6811', nascimento: '', status: 'vermelho', obs: 'Não vota mais', visitado: true, dataVisita: '2026-01-09' },
+            { id: 5, nome: 'Marli Abdala', equipe: 'Denise', rua: 'Santa Bárbara', numero: '974', complemento: '', bairro: 'Centro', telefone: '(99) 99552-2148', nascimento: '1961-03-15', status: 'verde', obs: '', visitado: true, dataVisita: '2026-01-12' },
+            { id: 6, nome: 'Jorge Fernandes', equipe: 'Lacy', rua: 'José Athanásio', numero: '1626', complemento: '', bairro: 'Centro', telefone: '(99) 99727-6777', nascimento: '1959-05-31', status: 'amarelo', obs: 'Precisa de limpeza', visitado: true, dataVisita: '2026-01-11' },
+            { id: 7, nome: 'Audrey', equipe: 'Lacy', rua: 'Sete de Setembro', numero: '259', complemento: '', bairro: 'Centro', telefone: '(99) 99843-6282', nascimento: '1962-12-06', status: 'verde', obs: '', visitado: true, dataVisita: '2026-01-12' },
+        ];
+
+        if (dados.length === 0) {
+            dados = dadosIniciais;
+            salvarLocalmente();
+        }
+
+        function salvarLocalmente() {
+            localStorage.setItem('visitasData', JSON.stringify(dados));
+            localStorage.setItem('equipes', JSON.stringify(equipes));
+            localStorage.setItem('bairros', JSON.stringify(bairros));
+        }
+
+        function atualizarFiltros() {
+            const selectEquipe = document.getElementById('filterTeam');
+            const selectBairro = document.getElementById('filterBairro');
+            const formEquipe = document.getElementById('formEquipe');
+
+            selectEquipe.innerHTML = '<option value="">Todas as equipes</option>';
+            formEquipe.innerHTML = '<option value="">Selecione...</option>';
+            equipes.forEach(e => {
+                const opt1 = document.createElement('option');
+                opt1.value = e;
+                opt1.textContent = e;
+                selectEquipe.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = e;
+                opt2.textContent = e;
+                formEquipe.appendChild(opt2);
+            });
+
+            selectBairro.innerHTML = '<option value="">Todos os bairros</option>';
+            bairros.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b;
+                opt.textContent = b;
+                selectBairro.appendChild(opt);
+            });
+        }
+
+        function formatarTelefone(valor) {
+            const numeros = valor.replace(/\D/g, '');
+            if (numeros.length < 11) return valor;
+            const codigo = numeros.slice(0, 2);
+            const parte1 = numeros.slice(2, 7);
+            const parte2 = numeros.slice(7, 11);
+            return `(${codigo}) ${parte1}-${parte2}`;
+        }
+
+        function mostrarDataVisita() {
+            const visitado = document.getElementById('formVisitado').checked;
+            document.getElementById('dataVisitaGroup').style.display = visitado ? 'block' : 'none';
+        }
+
+        function validarStatus() {
+            const status = document.getElementById('formStatus').value;
+            const alertaObs = document.getElementById('alertaObs');
+            const alertaTexto = document.getElementById('alertaTexto');
+            
+            if (status === 'vermelho') {
+                alertaObs.style.display = 'block';
+                alertaTexto.textContent = '⚠️ Digite o motivo nas Observações para salvar';
+            } else if (status === 'faleceu') {
+                alertaObs.style.display = 'block';
+                alertaTexto.textContent = '⚠️ Eleitor faleceu e o cadastro ficará inativo';
+            } else {
+                alertaObs.style.display = 'none';
+            }
+        }
+
+        function abrirModalCadastro() {
+            document.getElementById('modalCadastro').classList.add('active');
+            atualizarFiltros();
+            document.getElementById('formNome').focus();
+        }
+
+        function fecharModal() {
+            document.getElementById('modalCadastro').classList.remove('active');
+            document.getElementById('formNome').value = '';
+            document.getElementById('formEquipe').value = '';
+            document.getElementById('formRua').value = '';
+            document.getElementById('formNumero').value = '';
+            document.getElementById('formComplemento').value = '';
+            document.getElementById('formBairro').value = '';
+            document.getElementById('formTelefone').value = '';
+            document.getElementById('formNascimento').value = '';
+            document.getElementById('formVisitado').checked = false;
+            document.getElementById('formDataVisita').value = '';
+            document.getElementById('formStatus').value = 'verde';
+            document.getElementById('formObs').value = '';
+            document.getElementById('dataVisitaGroup').style.display = 'none';
+            document.getElementById('alertaObs').style.display = 'none';
+        }
+
+        function salvarCadastro(e) {
+            e.preventDefault();
+
+            const status = document.getElementById('formStatus').value;
+            const obs = document.getElementById('formObs').value;
+
+            if (status === 'vermelho' && !obs.trim()) {
+                alert('⚠️ Digite o motivo nas Observações para salvar');
+                return;
+            }
+
+            if (status === 'faleceu' && !obs.trim()) {
+                alert('⚠️ Eleitor faleceu e o cadastro ficará inativo. Por favor, adicione informações nas observações');
+                return;
+            }
+
+            const telefone = formatarTelefone(document.getElementById('formTelefone').value);
+
+            const novo = {
+                id: Math.max(...dados.map(d => d.id), 0) + 1,
+                nome: document.getElementById('formNome').value,
+                equipe: document.getElementById('formEquipe').value,
+                rua: document.getElementById('formRua').value,
+                numero: document.getElementById('formNumero').value,
+                complemento: document.getElementById('formComplemento').value,
+                bairro: document.getElementById('formBairro').value,
+                telefone: telefone,
+                nascimento: document.getElementById('formNascimento').value,
+                status: status,
+                obs: obs,
+                visitado: document.getElementById('formVisitado').checked,
+                dataVisita: document.getElementById('formDataVisita').value || ''
+            };
+
+            dados.push(novo);
+            salvarLocalmente();
+            fecharModal();
+            renderizar();
+        }
+
+        function renderizar() {
+            const tabela = document.getElementById('tabelaBody');
+            tabela.innerHTML = '';
+
+            let filtrados = dados.filter(d => d.status !== 'faleceu');
+
+            const busca = document.getElementById('searchName').value.toLowerCase();
+            const team = document.getElementById('filterTeam').value;
+            const bairro = document.getElementById('filterBairro').value;
+            const status = document.getElementById('filterStatus').value;
+            const visitado = document.getElementById('filterVisitado').value;
+
+            filtrados = filtrados.filter(d => {
+                return (d.nome.toLowerCase().includes(busca) || d.telefone.includes(busca)) &&
+                       (!team || d.equipe === team) &&
+                       (!bairro || d.bairro === bairro) &&
+                       (!status || d.status === status) &&
+                       (!visitado || (visitado === 'sim' ? d.visitado : !d.visitado));
+            });
+
+            if (abaAtiva === 'aniversarios') {
+                renderizarAniversarios();
+            } else if (abaAtiva === 'dashboard') {
+                renderizarDashboard();
+            } else if (abaAtiva === 'celebracoes') {
+                renderizarCelebracoes();
+            } else if (abaAtiva === 'nao-visitados') {
+                const naoVisitados = dados.filter(d => !d.visitado && d.status !== 'faleceu');
+                document.getElementById('tabelaNaoVisitadosBody').innerHTML = naoVisitados.map(item => `
+                    <tr class="row-highlight-${item.status}">
+                        <td><strong>${item.nome}</strong></td>
+                        <td>${item.equipe}</td>
+                        <td>${item.telefone}</td>
+                        <td><span class="status ${item.status}">${item.status.toUpperCase()}</span></td>
+                        <td><button class="btn btn-secondary" onclick="editarRegistro(${item.id})">Ver</button></td>
+                    </tr>
+                `).join('');
+            } else {
+                if (filtrados.length === 0) {
+                    document.getElementById('emptyState').style.display = 'block';
+                    document.querySelector('.table-wrapper').style.display = 'none';
+                } else {
+                    document.getElementById('emptyState').style.display = 'none';
+                    document.querySelector('.table-wrapper').style.display = 'block';
+                }
+
+                filtrados.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.className = `row-highlight-${item.status}`;
+                    tr.innerHTML = `
+                        <td><strong>${item.nome}</strong></td>
+                        <td>${item.equipe}</td>
+                        <td>${item.rua}, ${item.numero}${item.complemento ? ' - ' + item.complemento : ''}</td>
+                        <td>${item.telefone}</td>
+                        <td>${item.nascimento ? new Date(item.nascimento).toLocaleDateString('pt-BR') : '-'}</td>
+                        <td><span class="status ${item.status}">${item.status.toUpperCase()}</span></td>
+                        <td>${item.visitado ? '✓' : '✗'}</td>
+                        <td><button class="btn btn-secondary" style="font-size:12px; padding: 5px 10px;" onclick="editarRegistro(${item.id})">Ver</button></td>
+                    `;
+                    tabela.appendChild(tr);
+                });
+            }
+
+            atualizarEstatisticas();
+        }
+
+        function buscarPorNome() {
+            renderizar();
+        }
+
+        function abrirModalEquipe() {
+            const novoNome = prompt('Digite o nome do novo membro da equipe:');
+            if (novoNome && novoNome.trim()) {
+                if (!equipes.includes(novoNome.trim())) {
+                    equipes.push(novoNome.trim());
+                    salvarLocalmente();
+                    atualizarFiltros();
+                    alert(`✅ ${novoNome} adicionado à equipe!`);
+                } else {
+                    alert('⚠️ Este membro já existe na equipe');
+                }
+            }
+        }
+
+        function renderizarAniversarios() {
+            const hoje = new Date();
+            const aniversariantes = dados.filter(d => {
+                if (!d.nascimento || d.status === 'faleceu') return false;
+                const data = new Date(d.nascimento);
+                return data.getMonth() === hoje.getMonth();
+            }).sort((a, b) => {
+                const diaA = new Date(a.nascimento).getDate();
+                const diaB = new Date(b.nascimento).getDate();
+                return diaA - diaB;
+            });
+
+            const container = document.getElementById('aniversariosContainer');
+            if (aniversariantes.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>Nenhum aniversariante este mês</p></div>';
+            } else {
+                container.innerHTML = aniversariantes.map(item => {
+                    const data = new Date(item.nascimento);
+                    const idade = hoje.getFullYear() - data.getFullYear();
+                    return `
+                        <div class="dashboard-section">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h3>🎂 ${item.nome}</h3>
+                                    <p><strong>Data:</strong> ${data.toLocaleDateString('pt-BR')} (${idade} anos)</p>
+                                    <p><strong>Equipe:</strong> ${item.equipe}</p>
+                                    <p><strong>Telefone:</strong> ${item.telefone}</p>
+                                </div>
+                                <button class="btn btn-primary" onclick="gerarMensagemAniversario('${item.nome}', ${idade})">✨ Gerar Post</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function gerarMensagemAniversario(nome, idade) {
+            const mensagens = [
+                `🎉 Parabéns a ${nome} que completa ${idade} anos! Que este dia seja especial e cheio de alegria. Feliz aniversário! 🎂✨`,
+                `🎂 ${nome}, nossos parabéns neste dia tão especial! Que você tenha um excelente ano pela frente. Tudo de bom! 🎈🎁`,
+                `✨ Parabéns ${nome}! Que seu aniversário seja repleto de momentos felizes e pessoas queridas. Muitos anos de saúde e felicidade! 🎉💝`,
+            ];
+            const msg = mensagens[Math.floor(Math.random() * mensagens.length)];
+            alert(`📱 Mensagem gerada:\n\n${msg}\n\nCopie e envie via WhatsApp! 📲`);
+        }
+
+        function renderizarCelebracoes() {
+            const container = document.getElementById('celebracoesContainer');
+            const celebracoes = [
+                { data: '01/01', nome: 'Ano Novo', emoji: '🎆' },
+                { data: '31/05', nome: 'Dia da Criança', emoji: '👶' },
+                { data: '07/09', nome: 'Independência do Brasil', emoji: '🇧🇷' },
+                { data: '02/11', nome: 'Finados', emoji: '🕯️' },
+                { data: '15/11', nome: 'Proclamação da República', emoji: '🏛️' },
+                { data: '20/11', nome: 'Consciência Negra', emoji: '✊' },
+                { data: '25/12', nome: 'Natal', emoji: '🎄' },
+            ];
+
+            container.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    ${celebracoes.map(c => `
+                        <div class="dashboard-section" style="text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 10px;">${c.emoji}</div>
+                            <h3>${c.nome}</h3>
+                            <p style="color: #7f8c8d;">${c.data}</p>
+                            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;">📌 Agendar</button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderizarDashboard() {
+            setTimeout(() => {
+                const statusData = {
+                    verde: dados.filter(d => d.status === 'verde').length,
+                    amarelo: dados.filter(d => d.status === 'amarelo').length,
+                    vermelho: dados.filter(d => d.status === 'vermelho').length,
+                    faleceu: dados.filter(d => d.status === 'faleceu').length,
+                };
+
+                const equipesData = {};
+                equipes.forEach(e => {
+                    equipesData[e] = dados.filter(d => d.equipe === e).length;
+                });
+
+                const bairrosData = {};
+                dados.forEach(d => {
+                    bairrosData[d.bairro] = (bairrosData[d.bairro] || 0) + 1;
+                });
+
+                const sortedBairros = Object.entries(bairrosData).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+                const ctxStatus = document.getElementById('chartStatus')?.getContext('2d');
+                const ctxEquipe = document.getElementById('chartEquipe')?.getContext('2d');
+                const ctxBairro = document.getElementById('chartBairro')?.getContext('2d');
+                const ctxVisitacao = document.getElementById('chartVisitacao')?.getContext('2d');
+
+                if (chartStatus) chartStatus.destroy();
+                if (chartEquipe) chartEquipe.destroy();
+                if (chartBairro) chartBairro.destroy();
+                if (chartVisitacao) chartVisitacao.destroy();
+
+                if (ctxStatus) {
+                    chartStatus = new Chart(ctxStatus, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Permanece', 'Observação', 'Desistiu', 'Faleceu'],
+                            datasets: [{
+                                data: [statusData.verde, statusData.amarelo, statusData.vermelho, statusData.faleceu],
+                                backgroundColor: ['#27ae60', '#f39c12', '#e74c3c', '#36454f']
+                            }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false }
+                    });
+                }
+
+                if (ctxEquipe) {
+                    chartEquipe = new Chart(ctxEquipe, {
+                        type: 'bar',
+                        data: {
+                            labels: Object.keys(equipesData),
+                            datasets: [{
+                                label: 'Visitas',
+                                data: Object.values(equipesData),
+                                backgroundColor: '#1f8ba5'
+                            }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
+                    });
+                }
+
+                if (ctxBairro) {
+                    chartBairro = new Chart(ctxBairro, {
+                        type: 'bar',
+                        data: {
+                            labels: sortedBairros.map(b => b[0]),
+                            datasets: [{
+                                label: 'Registros',
+                                data: sortedBairros.map(b => b[1]),
+                                backgroundColor: '#1f8ba5'
+                            }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false }
+                    });
+                }
+
+                if (ctxVisitacao) {
+                    const visitados = dados.filter(d => d.visitado).length;
+                    const naoVisitados = dados.filter(d => !d.visitado).length;
+                    chartVisitacao = new Chart(ctxVisitacao, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Visitados', 'Não Visitados'],
+                            datasets: [{
+                                data: [visitados, naoVisitados],
+                                backgroundColor: ['#27ae60', '#e74c3c']
+                            }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false }
+                    });
+                }
+            }, 100);
+        }
+
+        function atualizarEstatisticas() {
+            const total = dados.filter(d => d.status !== 'faleceu').length;
+            const verde = dados.filter(d => d.status === 'verde').length;
+            const amarelo = dados.filter(d => d.status === 'amarelo').length;
+            const vermelho = dados.filter(d => d.status === 'vermelho').length;
+            const faleceu = dados.filter(d => d.status === 'faleceu').length;
+
+            document.getElementById('totalVisitas').textContent = total;
+            document.getElementById('totalVerde').textContent = verde;
+            document.getElementById('totalAmarelo').textContent = amarelo;
+            document.getElementById('totalVermelho').textContent = vermelho;
+            document.getElementById('totalFaleceu').textContent = faleceu;
+        }
+
+        function editarRegistro(id) {
+            const item = dados.find(d => d.id === id);
+            if (item) {
+                alert(`📋 ${item.nome}\n📍 ${item.rua}, ${item.numero}\n📞 ${item.telefone}\n💬 ${item.obs || 'Sem observações'}`);
+            }
+        }
+
+        function limparFiltros() {
+            document.getElementById('searchName').value = '';
+            document.getElementById('filterTeam').value = '';
+            document.getElementById('filterBairro').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterVisitado').value = '';
+            renderizar();
+        }
+
+        function mudarAba(aba) {
+            document.querySelectorAll('[id^="aba-"]').forEach(el => el.style.display = 'none');
+            document.getElementById(`aba-${aba}`).style.display = 'block';
+
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+
+            abaAtiva = aba;
+            renderizar();
+        }
+
+        function abrirImportModal() {
+            document.getElementById('modalImport').classList.add('active');
+        }
+
+        function fecharImportModal() {
+            document.getElementById('modalImport').classList.remove('active');
+            document.getElementById('fileImport').value = '';
+            document.getElementById('importStatus').innerHTML = '';
+            document.getElementById('btnConfirmarImport').style.display = 'none';
+        }
+
+        function processarImportacao(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    let dados_importados = [];
+                    if (file.name.endsWith('.xlsx')) {
+                        const workbook = XLSX.read(event.target.result, { type: 'array' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        dados_importados = XLSX.utils.sheet_to_json(sheet);
+                    } else if (file.name.endsWith('.csv')) {
+                        const text = new TextDecoder().decode(event.target.result);
+                        const lines = text.trim().split('\n');
+                        const headers = lines[0].split(',').map(h => h.trim());
+                        dados_importados = lines.slice(1).map(line => {
+                            const values = line.split(',').map(v => v.trim());
+                            const obj = {};
+                            headers.forEach((h, i) => obj[h] = values[i] || '');
+                            return obj;
+                        });
+                    }
+
+                    dadosImportacao = dados_importados;
+                    document.getElementById('importStatus').innerHTML = `<p>✅ ${dados_importados.length} registros encontrados. Clique em "Importar" para continuar.</p>`;
+                    document.getElementById('btnConfirmarImport').style.display = 'block';
+                } catch (err) {
+                    document.getElementById('importStatus').innerHTML = `<p style="color: red;">❌ Erro ao processar arquivo: ${err.message}</p>`;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function confirmarImportacao() {
+            if (!dadosImportacao || dadosImportacao.length === 0) return;
+
+            dadosImportacao.forEach(row => {
+                const novoId = Math.max(...dados.map(d => d.id), 0) + 1;
+                const telefone = row['Telefone'] || row['TELEFONE'] || '';
+                const nascimento = row['Data de Nascimento'] || row['DATA DE NASCIMENTO'] || row['Data Nascimento'] || '';
+                
+                dados.push({
+                    id: novoId,
+                    nome: row['Nome'] || row['NOME'] || '',
+                    equipe: row['Equipe'] || row['EQUIPE'] || '',
+                    rua: row['Rua'] || row['RUA'] || row['Endereço'] || row['ENDEREÇO'] || '',
+                    numero: row['Número'] || row['NÚMERO'] || row['Nº'] || '',
+                    complemento: row['Complemento'] || row['COMPLEMENTO'] || '',
+                    bairro: row['Bairro'] || row['BAIRRO'] || '',
+                    telefone: telefone,
+                    nascimento: nascimento,
+                    status: (row['Status'] || row['STATUS'] || 'verde').toLowerCase(),
+                    obs: row['Observações'] || row['OBSERVAÇÕES'] || row['Observação'] || row['OBSERVAÇÃO'] || '',
+                    visitado: (row['Visitado'] || row['VISITADO'] || 'não').toLowerCase().includes('sim'),
+                    dataVisita: row['Data da Visita'] || row['DATA DA VISITA'] || ''
+                });
+            });
+
+            salvarLocalmente();
+            fecharImportModal();
+            atualizarFiltros();
+            renderizar();
+            alert(`✅ ${dadosImportacao.length} registros importados com sucesso!`);
+        }
+
+        function exportarCSV() {
+            const headers = ['Quantidade', 'Contato da Equipe', 'Pessoa Visitada', 'Rua', 'Número', 'Complemento', 'Bairro', 'Telefone', 'Data de Nascimento', 'Data da Visita', 'Status', 'Visitado', 'Observações'];
+            let csv = headers.join(',') + '\n';
+
+            dados.forEach((d, idx) => {
+                csv += `"${idx + 1}","${d.equipe}","${d.nome}","${d.rua}","${d.numero}","${d.complemento}","${d.bairro}","${d.telefone}","${d.nascimento}","${d.dataVisita}","${d.status}","${d.visitado ? 'SIM' : 'NÃO'}","${d.obs}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `visitas_giovane_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+
+        document.getElementById('formTelefone').addEventListener('input', (e) => {
+            e.target.value = formatarTelefone(e.target.value);
+        });
+
+        document.getElementById('formTelefone').addEventListener('blur', (e) => {
+            e.target.value = formatarTelefone(e.target.value);
+        });
+
+        atualizarFiltros();
+        renderizar();
+
+        document.getElementById('searchName').addEventListener('input', renderizar);
+        document.getElementById('filterTeam').addEventListener('change', renderizar);
+        document.getElementById('filterBairro').addEventListener('change', renderizar);
+        document.getElementById('filterStatus').addEventListener('change', renderizar);
+        document.getElementById('filterVisitado').addEventListener('change', renderizar);
+    </script>
+</body>
+</html>
